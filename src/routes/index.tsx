@@ -14,7 +14,7 @@ import { STATUS_LABEL_KEY } from "@/lib/orders";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "الرئيسية — EZ Vendor" },
+      { title: "الرئيسية — Yalla Vendor" },
       { name: "description", content: "نظرة عامة على أداء مطعمك اليومي" },
     ],
   }),

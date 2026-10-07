@@ -44,25 +44,25 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "EZ Vendor — لوحة إدارة المطاعم والمتاجر" },
+      { title: "Yalla Vendor — لوحة إدارة المطاعم والمتاجر" },
       {
         name: "description",
         content:
-          "EZ Super App vendor panel for restaurants & stores: orders, menu, wallet, performance.",
+          "Yalla Super App vendor panel for restaurants & stores: orders, menu, wallet, performance.",
       },
-      { name: "author", content: "EZ" },
-      { property: "og:title", content: "EZ Vendor — لوحة إدارة المطاعم والمتاجر" },
+      { name: "author", content: "Yalla" },
+      { property: "og:title", content: "Yalla Vendor — لوحة إدارة المطاعم والمتاجر" },
       {
         property: "og:description",
         content:
-          "EZ Super App vendor panel for restaurants & stores: orders, menu, wallet, performance.",
+          "Yalla Super App vendor panel for restaurants & stores: orders, menu, wallet, performance.",
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:title", content: "EZ Vendor — لوحة إدارة المطاعم والمتاجر" },
+      { name: "twitter:title", content: "Yalla Vendor — لوحة إدارة المطاعم والمتاجر" },
       {
         name: "twitter:description",
         content:
-          "EZ Super App vendor panel for restaurants & stores: orders, menu, wallet, performance.",
+          "Yalla Super App vendor panel for restaurants & stores: orders, menu, wallet, performance.",
       },
       {
         property: "og:image",

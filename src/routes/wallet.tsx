@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/wallet")({
   head: () => ({
     meta: [
-      { title: "المحفظة — EZ Vendor" },
+      { title: "المحفظة — Yalla Vendor" },
       { name: "description", content: "تابع رصيدك وعملياتك المالية" },
     ],
   }),
@@ -168,7 +168,7 @@ function WalletPage() {
                       </p>
                     </div>
                     <div className="text-end">
-                      <p className="opacity-70">EZ Vendor Wallet</p>
+                      <p className="opacity-70">Yalla Vendor Wallet</p>
                       <p className="ez-num mt-0.5 font-semibold">
                         {w.payout_account ? `•••• ${w.payout_account.iban_last4}` : "—"}
                       </p>

@@ -1,6 +1,6 @@
-# EZ Vendor Hub
+# Yalla Vendor Hub
 
-Create a complete web-based Arabic RTL UI/UX for a Restaurant / Vendor Panel in a multi-service Super App called EZ.
+Create a complete web-based Arabic RTL UI/UX for a Restaurant / Vendor Panel in a multi-service Super App called Yalla.
 
 This is a Vendor-Multi system where each restaurant or store manages its own operations.
 

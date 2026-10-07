@@ -40,7 +40,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "الإعدادات — EZ Vendor" },
+      { title: "الإعدادات — Yalla Vendor" },
       { name: "description", content: "أدر معلومات وإعدادات مطعمك" },
     ],
   }),

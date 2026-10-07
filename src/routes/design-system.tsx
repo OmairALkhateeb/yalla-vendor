@@ -19,8 +19,8 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/design-system")({
   head: () => ({
     meta: [
-      { title: "نظام التصميم — EZ Vendor" },
-      { name: "description", content: "دليل نظام التصميم لمنصة EZ للتجار" },
+      { title: "نظام التصميم — Yalla Vendor" },
+      { name: "description", content: "دليل نظام التصميم لمنصة Yalla للتجار" },
     ],
   }),
   component: DesignSystemPage,
@@ -56,7 +56,7 @@ function DesignSystemPage() {
       <Section title={t("ds.typography")} description={t("ds.typographyDesc")}>
         <div className="space-y-4">
           <TypeRow size="text-4xl" weight="font-bold" label="Display / 36 / Bold">
-            مرحباً بك في EZ
+            مرحباً بك في Yalla
           </TypeRow>
           <TypeRow size="text-2xl" weight="font-bold" label="H1 / 24 / Bold">
             عنوان الصفحة الرئيسي

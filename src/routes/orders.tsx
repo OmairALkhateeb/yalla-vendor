@@ -49,7 +49,7 @@ export const Route = createFileRoute("/orders")({
   }),
   head: () => ({
     meta: [
-      { title: "الطلبات — EZ Vendor" },
+      { title: "الطلبات — Yalla Vendor" },
       { name: "description", content: "تابع وأدر جميع طلبات مطعمك في الوقت الفعلي" },
     ],
   }),

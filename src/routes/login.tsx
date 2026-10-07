@@ -15,7 +15,7 @@ export const Route = createFileRoute("/login")({
   }),
   head: () => ({
     meta: [
-      { title: "تسجيل الدخول — EZ Vendor" },
+      { title: "تسجيل الدخول — Yalla Vendor" },
       { name: "description", content: "سجّل الدخول إلى لوحة إدارة المطعم" },
     ],
   }),
@@ -87,7 +87,7 @@ function LoginPage() {
       <div className="w-full max-w-md">
         {/* Brand */}
         <div className="mb-6 flex flex-col items-center text-center">
-          <img src={logo} alt="EZ" className="h-16 w-16 object-contain" />
+          <img src={logo} alt="Yalla" className="h-16 w-16 object-contain" />
           <h1 className="mt-4 text-2xl font-bold tracking-tight">{t("app.name")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("app.tagline")}</p>
         </div>

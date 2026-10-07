@@ -16,8 +16,8 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/support")({
   head: () => ({
     meta: [
-      { title: "الدعم — EZ Vendor" },
-      { name: "description", content: "تواصل مع فريق دعم EZ" },
+      { title: "الدعم — Yalla Vendor" },
+      { name: "description", content: "تواصل مع فريق دعم Yalla" },
     ],
   }),
   component: SupportPage,

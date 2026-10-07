@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/menu")({
   head: () => ({
     meta: [
-      { title: "القائمة — EZ Vendor" },
+      { title: "القائمة — Yalla Vendor" },
       { name: "description", content: "إدارة فئات وأصناف وإضافات قائمة المطعم" },
     ],
   }),

@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/reviews")({
   head: () => ({
     meta: [
-      { title: "التقييمات — EZ Vendor" },
+      { title: "التقييمات — Yalla Vendor" },
       { name: "description", content: "اقرأ ورد على ملاحظات زبائنك" },
     ],
   }),

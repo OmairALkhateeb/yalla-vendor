@@ -109,7 +109,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       >
         {/* Brand */}
         <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-5">
-          <img src={logo} alt="EZ" className="h-10 w-10 shrink-0 object-contain" />
+          <img src={logo} alt="Yalla" className="h-10 w-10 shrink-0 object-contain" />
           <div className="flex flex-1 flex-col leading-tight">
             <span className="text-sm font-semibold text-sidebar-primary-foreground">
               {t("app.name")}

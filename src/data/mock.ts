@@ -63,7 +63,7 @@ export const ORDERS: Order[] = [
     minutesAgo: 0,
     acceptDeadlineSec: 168,
     address: { ar: "بغداد - زيونة", en: "Baghdad - Zayouna", ku: "بەغدا - زەیوونە" },
-    paymentMethod: { ar: "محفظة EZ", en: "EZ Wallet", ku: "جزدانی EZ" },
+    paymentMethod: { ar: "محفظة Yalla", en: "Yalla Wallet", ku: "جزدانی Yalla" },
   },
   {
     id: "EZ-10237",
@@ -107,7 +107,7 @@ export const ORDERS: Order[] = [
     status: "ready",
     minutesAgo: 14,
     address: { ar: "أربيل - عينكاوة", en: "Erbil - Ainkawa", ku: "هەولێر - عەینکاوە" },
-    paymentMethod: { ar: "محفظة EZ", en: "EZ Wallet", ku: "جزدانی EZ" },
+    paymentMethod: { ar: "محفظة Yalla", en: "Yalla Wallet", ku: "جزدانی Yalla" },
   },
   {
     id: "EZ-10241",
@@ -148,7 +148,7 @@ export const ORDERS: Order[] = [
     status: "completed",
     minutesAgo: 52,
     address: { ar: "بغداد - الجادرية", en: "Baghdad - Jadriya", ku: "بەغدا - جادرییە" },
-    paymentMethod: { ar: "محفظة EZ", en: "EZ Wallet", ku: "جزدانی EZ" },
+    paymentMethod: { ar: "محفظة Yalla", en: "Yalla Wallet", ku: "جزدانی Yalla" },
   },
   {
     id: "EZ-10233",

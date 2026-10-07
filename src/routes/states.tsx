@@ -16,7 +16,7 @@ import {
 export const Route = createFileRoute("/states")({
   head: () => ({
     meta: [
-      { title: "حالات الواجهة — EZ Vendor" },
+      { title: "حالات الواجهة — Yalla Vendor" },
       { name: "description", content: "معرض لجميع حالات الواجهة" },
     ],
   }),

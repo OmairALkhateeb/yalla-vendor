@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/performance")({
   head: () => ({
     meta: [
-      { title: "الأداء — EZ Vendor" },
+      { title: "الأداء — Yalla Vendor" },
       { name: "description", content: "تابع مؤشرات الأداء الرئيسية لمطعمك" },
     ],
   }),
