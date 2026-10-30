@@ -103,7 +103,7 @@ export const apiTranslations: Record<"ar" | "en" | "ku", Record<string, string>>
     "orders.showStuck": "إظهار",
     "orders.stuckTitle": "هالطلب عالق",
     "orders.stuckDesc":
-      "صار له {time} وما انقفل. المطعم ما بيقدر يكمّله من اللوحة، بلّغ الإدارة لتسكّره.",
+      "صار له {time} وما انقفل. إذا ما بتقدر تكمّله من اللوحة، بلّغ الإدارة لتسكّره.",
     "orders.reportAdmin": "إبلاغ الإدارة",
     "orders.reported": "تم إبلاغ الإدارة",
     "orders.reportedView": "تم الإبلاغ — عرض التذكرة",
@@ -243,7 +243,7 @@ export const apiTranslations: Record<"ar" | "en" | "ku", Record<string, string>>
     "orders.showStuck": "Show",
     "orders.stuckTitle": "This order is stuck",
     "orders.stuckDesc":
-      "It has been open for {time}. The restaurant can't close it from the panel — report it so an admin can close it.",
+      "It has been open for {time}. If you can't finish it from the panel, report it so an admin can close it.",
     "orders.reportAdmin": "Report to admin",
     "orders.reported": "Reported to admin",
     "orders.reportedView": "Reported — view ticket",
@@ -386,7 +386,7 @@ export const apiTranslations: Record<"ar" | "en" | "ku", Record<string, string>>
     "orders.showStuck": "پیشاندان",
     "orders.stuckTitle": "ئەم داواکارییە گیراوە",
     "orders.stuckDesc":
-      "{time}ە کراوەیە. چێشتخانە ناتوانێت لە پانێڵەوە دایبخات — ڕاپۆرتی بکە بۆ ئەوەی بەڕێوەبەر دایبخات.",
+      "{time}ە کراوەیە. ئەگەر ناتوانیت لە پانێڵەوە تەواوی بکەیت، ڕاپۆرتی بکە بۆ ئەوەی بەڕێوەبەر دایبخات.",
     "orders.reportAdmin": "ڕاپۆرت بۆ بەڕێوەبەر",
     "orders.reported": "ڕاپۆرت نێردرا بۆ بەڕێوەبەر",
     "orders.reportedView": "ڕاپۆرت کرا — بینینی تیکت",
