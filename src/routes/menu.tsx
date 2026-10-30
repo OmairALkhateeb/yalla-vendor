@@ -24,6 +24,7 @@ import { menuApi } from "@/lib/api/vendor";
 import type { MenuCategory, MenuItem, MenuItemPayload, Translations } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth";
 import { formatMoney, pickT } from "@/lib/format";
+import { useCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/menu")({
@@ -57,6 +58,7 @@ type CategoryDialog = { open: boolean; category: MenuCategory | null };
 
 function MenuPage() {
   const { t, locale } = useApp();
+  const cur = useCurrency();
   const { can } = useAuth();
   const queryClient = useQueryClient();
   const canManage = can("manage_menu");
@@ -74,6 +76,9 @@ function MenuPage() {
   const [edit, setEdit] = useState<EditState>({ open: false, item: null });
   const [catDialog, setCatDialog] = useState<CategoryDialog>({ open: false, category: null });
   const [dragId, setDragId] = useState<number | null>(null);
+  const [onlyNoImage, setOnlyNoImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [imageTarget, setImageTarget] = useState<number | null>(null);
 
   const categories = useMemo(
     () => [...(categoriesQuery.data?.categories ?? [])].sort((a, b) => a.sort_order - b.sort_order),
@@ -89,9 +94,10 @@ function MenuPage() {
     return items.filter((i) => {
       const inCat = activeCat === "all" ? true : i.category_id === activeCat;
       const inQuery = !q || LANGS.some((l) => (i.name[l] ?? "").toLowerCase().includes(q));
-      return inCat && inQuery;
+      return inCat && inQuery && (!onlyNoImage || !i.image);
     });
-  }, [items, activeCat, query]);
+  }, [items, activeCat, query, onlyNoImage]);
+  const noImageCount = items.filter((i) => !i.image).length;
 
   const toggleSelect = (id: number) => {
     setSelected((prev) => {
@@ -142,6 +148,23 @@ function MenuPage() {
     },
     onError,
   });
+
+  // Quick image upload straight from the list (multipart POST /menu/items/{id}).
+  const quickImage = useMutation({
+    mutationFn: ({ id, file }: { id: number; file: File }) => menuApi.updateItem(id, {}, file),
+    onSuccess: (updated) => {
+      queryClient.setQueryData<MenuItem[]>(["menu", "items"], (prev) =>
+        prev?.map((i) => (i.id === updated.id ? { ...i, ...updated } : i)),
+      );
+      toast.success(t("menu.imageUploaded"));
+    },
+    onError,
+    onSettled: () => setImageTarget(null),
+  });
+  const pickImageFor = (id: number) => {
+    setImageTarget(id);
+    imageInputRef.current?.click();
+  };
 
   const toggleCategory = useMutation({
     mutationFn: (id: number) => menuApi.toggleCategory(id),
@@ -396,6 +419,26 @@ function MenuPage() {
             </div>
           </div>
 
+          {canManage && noImageCount > 0 && (
+            <div className="flex flex-wrap items-center gap-2 border-b border-border bg-info/10 px-4 py-2.5 text-xs">
+              <ImagePlus className="h-4 w-4 shrink-0 text-info" />
+              <span className="flex-1 font-medium">
+                <span className="ez-num font-bold">{noImageCount}</span> {t("menu.noImageBanner")}
+              </span>
+              <button
+                onClick={() => setOnlyNoImage((v) => !v)}
+                className={cn(
+                  "rounded-md px-2.5 py-1 font-semibold transition",
+                  onlyNoImage
+                    ? "bg-info text-info-foreground"
+                    : "border border-info/30 bg-card text-info hover:bg-info/10",
+                )}
+              >
+                {t(onlyNoImage ? "menu.showAllItems" : "menu.showNoImage")}
+              </button>
+            </div>
+          )}
+
           {/* Bulk action bar */}
           {selected.size > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-primary-soft px-4 py-2.5">
@@ -488,13 +531,38 @@ function MenuPage() {
                             )}
                           </button>
 
-                          <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-primary-soft to-secondary text-2xl ez-shadow">
-                            {item.image ? (
-                              <img src={item.image} alt="" className="h-full w-full object-cover" />
-                            ) : (
-                              "🍽️"
-                            )}
-                          </div>
+                          {item.image || !canManage ? (
+                            <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-primary-soft to-secondary text-2xl ez-shadow">
+                              {item.image ? (
+                                <img
+                                  src={item.image}
+                                  alt=""
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                "🍽️"
+                              )}
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={quickImage.isPending}
+                              onClick={() => pickImageFor(item.id)}
+                              title={t("menu.addImage")}
+                              className="group/img grid h-14 w-14 shrink-0 place-items-center rounded-xl border-2 border-dashed border-primary/40 bg-primary-soft/40 text-primary transition hover:border-primary hover:bg-primary-soft disabled:opacity-60"
+                            >
+                              {quickImage.isPending && imageTarget === item.id ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                              ) : (
+                                <span className="flex flex-col items-center gap-0.5">
+                                  <ImagePlus className="h-5 w-5" />
+                                  <span className="text-[9px] font-semibold leading-none">
+                                    {t("menu.addImageShort")}
+                                  </span>
+                                </span>
+                              )}
+                            </button>
+                          )}
 
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
@@ -525,7 +593,7 @@ function MenuPage() {
                             <div className="ez-num text-base font-bold text-primary">
                               {formatMoney(item.price)}
                               <span className="ms-1 text-[10px] font-medium text-muted-foreground">
-                                {t("common.currency")}
+                                {cur.label}
                               </span>
                             </div>
                           </div>
@@ -575,6 +643,23 @@ function MenuPage() {
           </div>
         </section>
       </div>
+
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file || imageTarget === null) return setImageTarget(null);
+          if (file.size > 2 * 1024 * 1024) {
+            setImageTarget(null);
+            return toast.error(t("menu.imageTooLarge"));
+          }
+          quickImage.mutate({ id: imageTarget, file });
+        }}
+      />
 
       {edit.open && edit.item && (
         <ItemEditor
@@ -805,6 +890,7 @@ function ItemEditor({
   onSaved: () => void;
 }) {
   const { t, locale } = useApp();
+  const cur = useCurrency();
   const isNew = item.id === 0;
   const [draft, setDraft] = useState<ItemDraft>(() => ({
     name: toTr(item.name),
@@ -1040,7 +1126,7 @@ function ItemEditor({
                   onChange={(e) => update("price", Number(e.target.value))}
                   className="ez-num h-full w-full bg-transparent px-3 text-sm font-semibold outline-none"
                 />
-                <span className="px-3 text-xs text-muted-foreground">{t("common.currency")}</span>
+                <span className="px-3 text-xs text-muted-foreground">{cur.label}</span>
               </div>
               {fieldError("price") && (
                 <p className="mt-1 text-xs text-destructive">{fieldError("price")}</p>
@@ -1130,9 +1216,7 @@ function ItemEditor({
                         placeholder={t("menu.addonPrice")}
                         className="ez-num h-full w-full bg-transparent px-2 text-sm font-semibold outline-none"
                       />
-                      <span className="px-2 text-[10px] text-muted-foreground">
-                        {t("common.currency")}
-                      </span>
+                      <span className="px-2 text-[10px] text-muted-foreground">{cur.label}</span>
                     </div>
                     <Toggle
                       checked={a.is_available}

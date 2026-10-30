@@ -1,5 +1,6 @@
 import type { Locale } from "@/i18n/translations";
 import type { Translations } from "@/lib/api/types";
+import { DEFAULT_CURRENCY } from "@/lib/api/config";
 
 /** Picks the active-locale string from a { ar, en, ku } object, falling back to any non-empty value. */
 export function pickT(obj: Translations | null | undefined, locale: Locale, fallback = ""): string {
@@ -13,13 +14,15 @@ export function formatMoney(n: number | null | undefined): string {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(n);
 }
 
-/** Currency label from the API's `currency` field (IQD → localized "د.ع"). */
+/** Currency label from a currency code (IQD → localized "د.ع", USD → "$"). */
 export function currencyLabel(
   currency: string | null | undefined,
   t: (k: string) => string,
 ): string {
-  if (!currency || currency === "IQD") return t("common.currency");
-  return currency;
+  const code = (currency || DEFAULT_CURRENCY).toUpperCase();
+  if (code === "IQD") return t("common.currency");
+  if (code === "USD") return "$";
+  return code;
 }
 
 export function money(
@@ -84,4 +87,18 @@ export function seriesLabel(
   if (p.hour !== null && p.hour !== undefined) return `${String(p.hour).padStart(2, "0")}:00`;
   if (byDate) return p.date.slice(5); // MM-DD for month views
   return t(`day.${p.day}`);
+}
+
+/** "45m" / "3h 20m" / "21d 4h" — keeps very old orders readable instead of "30000m". */
+export function formatElapsed(
+  minutes: number | null | undefined,
+  t: (k: string) => string,
+): string {
+  if (minutes === null || minutes === undefined || minutes < 0) return "—";
+  const m = Math.floor(minutes);
+  if (m < 60) return `${m}${t("time.m")}`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return m % 60 ? `${h}${t("time.h")} ${m % 60}${t("time.m")}` : `${h}${t("time.h")}`;
+  const d = Math.floor(h / 24);
+  return h % 24 ? `${d}${t("time.d")} ${h % 24}${t("time.h")}` : `${d}${t("time.d")}`;
 }

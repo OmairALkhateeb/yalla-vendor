@@ -29,6 +29,7 @@ import { walletApi } from "@/lib/api/vendor";
 import type { Settlement, WalletSummary } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth";
 import { formatChange, formatDate, formatMoney, money } from "@/lib/format";
+import { useCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/wallet")({
@@ -45,6 +46,7 @@ type Tab = "all" | "in" | "out";
 
 function WalletPage() {
   const { t, locale } = useApp();
+  const currency = useCurrency();
   const { can } = useAuth();
   const [tab, setTab] = useState<Tab>("all");
   const [query, setQuery] = useState("");
@@ -87,7 +89,7 @@ function WalletPage() {
   };
 
   const w = summary.data;
-  const cur = w?.currency ?? "IQD";
+  const cur = currency.code;
 
   return (
     <div>
@@ -154,9 +156,7 @@ function WalletPage() {
                   </div>
                   <p className="ez-num mt-3 text-4xl font-bold tracking-tight">
                     {formatMoney(w.balance)}
-                    <span className="ms-1 text-lg font-medium opacity-80">
-                      {t("common.currency")}
-                    </span>
+                    <span className="ms-1 text-lg font-medium opacity-80">{currency.label}</span>
                   </p>
                   <p className="mt-1 text-xs opacity-80">{t("wallet.availableNow")}</p>
 
@@ -346,7 +346,7 @@ function WalletPage() {
                         -{formatMoney(s.commission_amount)}
                       </td>
                       <td className="ez-num px-4 py-3 text-end text-sm font-bold text-success">
-                        {formatMoney(s.net_amount)} {t("common.currency")}
+                        {formatMoney(s.net_amount)} {currency.label}
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -466,7 +466,7 @@ function WalletPage() {
                         )}
                       >
                         {tx.direction === "in" ? "+" : "-"}
-                        {formatMoney(tx.amount)} {t("common.currency")}
+                        {formatMoney(tx.amount)} {currency.label}
                       </td>
                     </tr>
                   ))}
@@ -559,6 +559,7 @@ const inputCls =
 /** Owner only — min 10,000, one pending request at a time, amount is held immediately. */
 function WithdrawDialog({ wallet, onClose }: { wallet: WalletSummary; onClose: () => void }) {
   const { t } = useApp();
+  const currency = useCurrency();
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -590,10 +591,8 @@ function WithdrawDialog({ wallet, onClose }: { wallet: WalletSummary; onClose: (
           )}
           <p className="ez-num text-xs text-muted-foreground">
             {t("wallet.balance")}:{" "}
-            <span className="font-semibold text-foreground">
-              {money(wallet.balance, wallet.currency, t)}
-            </span>{" "}
-            · {t("wallet.minWithdrawal")}: {money(wallet.min_withdrawal, wallet.currency, t)}
+            <span className="font-semibold text-foreground">{currency.money(wallet.balance)}</span>{" "}
+            · {t("wallet.minWithdrawal")}: {currency.money(wallet.min_withdrawal)}
           </p>
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">

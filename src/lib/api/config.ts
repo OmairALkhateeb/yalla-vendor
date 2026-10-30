@@ -17,5 +17,12 @@ export const API_BASE = `${SERVER_URL}/api/vendor`;
  */
 export const BROADCAST_AUTH_URL = env.VITE_BROADCAST_AUTH_URL ?? "/broadcasting/auth";
 
+/**
+ * Currency the backend stores amounts in. The `currency` field from GET /store wins;
+ * VITE_CURRENCY overrides it (use it if the API reports the wrong code).
+ */
+export const CURRENCY_OVERRIDE = env.VITE_CURRENCY?.trim().toUpperCase() || null;
+export const DEFAULT_CURRENCY = "USD";
+
 export const PUSHER_KEY = env.VITE_PUSHER_KEY ?? "0b71d893968ff1df6b86";
 export const PUSHER_CLUSTER = env.VITE_PUSHER_CLUSTER ?? "us2";

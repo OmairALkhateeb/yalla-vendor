@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -22,21 +22,26 @@ import {
   AlertTriangle,
   Loader2,
   Hourglass,
+  Flag,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { useApp } from "@/i18n/AppProviders";
 import { PageHeader, StatusPill } from "@/components/ui-ez/Primitives";
 import { EmptyOrders, EmptySearch, SkeletonList } from "@/components/ui-ez/States";
 import { QueryState, errorMessage } from "@/components/ui-ez/QueryState";
-import { ordersApi } from "@/lib/api/vendor";
+import { ordersApi, supportApi } from "@/lib/api/vendor";
 import type { Order, OrderAction, OrderStatus } from "@/lib/api/types";
-import { formatMoney, formatTime } from "@/lib/format";
+import { formatElapsed, formatMoney, formatTime } from "@/lib/format";
 import {
   AWAITING_KEY,
   CANCELLED_BY_KEY,
   PAYMENT_KEY,
   STATUS_LABEL_KEY,
+  isStuck,
   useAcceptCountdown,
 } from "@/lib/orders";
+import { useCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/orders")({
@@ -71,6 +76,7 @@ function OrdersPage() {
   const [perPage, setPerPage] = useState(PAGE_SIZE);
   const [selectedId, setSelectedId] = useState<number | undefined>(search.order);
   const [rejecting, setRejecting] = useState<Order | null>(null);
+  const [hideStuck, setHideStuck] = useState(false);
 
   // Topbar search / notification deep-links update the URL.
   useEffect(() => {
@@ -103,6 +109,8 @@ function OrdersPage() {
   });
 
   const orders = list.data?.orders ?? [];
+  const stuckCount = tab === "active" ? orders.filter(isStuck).length : 0;
+  const visibleOrders = hideStuck && tab === "active" ? orders.filter((o) => !isStuck(o)) : orders;
   const currentId = selectedId ?? orders[0]?.id;
   const listItem = orders.find((o) => o.id === currentId);
 
@@ -277,6 +285,22 @@ function OrdersPage() {
             </div>
           </div>
 
+          {stuckCount > 0 && (
+            <div className="flex items-center gap-2 border-b border-warning/30 bg-warning/10 px-3 py-2 text-xs">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
+              <span className="flex-1 font-medium">
+                <span className="ez-num font-bold">{stuckCount}</span> {t("orders.stuckBanner")}
+              </span>
+              <button
+                onClick={() => setHideStuck((v) => !v)}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-semibold hover:bg-warning/15"
+              >
+                {hideStuck ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                {t(hideStuck ? "orders.showStuck" : "orders.hideStuck")}
+              </button>
+            </div>
+          )}
+
           {/* Order cards list */}
           <div className="max-h-[calc(100vh-340px)] divide-y divide-border overflow-y-auto">
             <QueryState query={list} loading={<SkeletonList rows={5} />}>
@@ -299,7 +323,7 @@ function OrdersPage() {
                   </div>
                 ) : (
                   <>
-                    {data.orders.map((o) => (
+                    {visibleOrders.map((o) => (
                       <OrderListCard
                         key={o.id}
                         order={o}
@@ -375,6 +399,7 @@ function OrderListCard({
   onAction: (a: OrderAction) => void;
 }) {
   const { t } = useApp();
+  const cur = useCurrency();
   const queryClient = useQueryClient();
   const isNew = order.status === "new";
   const left = useAcceptCountdown(order);
@@ -416,6 +441,11 @@ function OrderListCard({
           <div className="flex items-center gap-2">
             <span className="ez-num text-sm font-bold text-primary">{order.reference}</span>
             <StatusPill status={order.status} label={t(STATUS_LABEL_KEY[order.status])} />
+            {isStuck(order) && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-bold text-warning-foreground">
+                <AlertTriangle className="h-3 w-3" /> {t("orders.stuck")}
+              </span>
+            )}
             {urgent && (
               <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-bold text-destructive">
                 <AlertTriangle className="h-3 w-3" /> {t("orders.urgent")}
@@ -429,10 +459,10 @@ function OrderListCard({
         </div>
         <div className="text-end shrink-0">
           <p className="ez-num text-base font-bold">{formatMoney(order.total)}</p>
-          <p className="ez-num text-[10px] text-muted-foreground">{t("common.currency")}</p>
+          <p className="ez-num text-[10px] text-muted-foreground">{cur.label}</p>
           <p className="ez-num mt-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground">
             <Clock className="h-3 w-3" />
-            {order.minutes_ago}m {t("orders.elapsed")}
+            {formatElapsed(order.minutes_ago, t)} {t("orders.elapsed")}
           </p>
         </div>
       </div>
@@ -526,6 +556,7 @@ function OrderDetails({
   onAction: (a: OrderAction) => void;
 }) {
   const { t, locale } = useApp();
+  const cur = useCurrency();
   const left = useAcceptCountdown(order);
 
   return (
@@ -537,7 +568,8 @@ function OrderDetails({
             <p className="ez-num text-lg font-bold text-primary">{order.reference}</p>
             <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
               <Clock className="h-3.5 w-3.5" /> {t("orders.placedAt")}{" "}
-              {formatTime(order.placed_at, locale)} · {order.minutes_ago}m {t("orders.elapsed")}
+              {formatTime(order.placed_at, locale)} · {formatElapsed(order.minutes_ago, t)}{" "}
+              {t("orders.elapsed")}
             </p>
           </div>
           <StatusPill status={order.status} label={t(STATUS_LABEL_KEY[order.status])} />
@@ -550,6 +582,8 @@ function OrderDetails({
       </div>
 
       <div className="flex-1 space-y-5 overflow-y-auto p-5">
+        {isStuck(order) && <StuckNotice order={order} />}
+
         {/* Timeline */}
         <Section title={t("orders.timeline")}>
           <Timeline order={order} />
@@ -626,7 +660,7 @@ function OrderDetails({
                         </p>
                       )}
                       <p className="ez-num mt-0.5 text-[11px] text-muted-foreground">
-                        {formatMoney(it.unit_price)} {t("common.currency")}
+                        {formatMoney(it.unit_price)} {cur.label}
                       </p>
                     </td>
                     <td className="ez-num px-3 py-2.5 text-center font-bold">×{it.quantity}</td>
@@ -650,22 +684,22 @@ function OrderDetails({
           <div className="space-y-1.5 text-sm">
             <Row
               label={t("orders.subtotal")}
-              value={`${formatMoney(order.subtotal)} ${t("common.currency")}`}
+              value={`${formatMoney(order.subtotal)} ${cur.label}`}
             />
             {order.discount > 0 && (
               <Row
                 label={t("orders.discount")}
-                value={`-${formatMoney(order.discount)} ${t("common.currency")}`}
+                value={`-${formatMoney(order.discount)} ${cur.label}`}
               />
             )}
             <Row
               label={t("orders.deliveryFee")}
-              value={`${formatMoney(order.delivery_fee)} ${t("common.currency")}`}
+              value={`${formatMoney(order.delivery_fee)} ${cur.label}`}
             />
             <div className="my-2 border-t border-dashed border-border" />
             <Row
               label={t("orders.total")}
-              value={`${formatMoney(order.total)} ${t("common.currency")}`}
+              value={`${formatMoney(order.total)} ${cur.label}`}
               bold
             />
             <p className="ez-num pt-1 text-[11px] text-muted-foreground">
@@ -697,6 +731,79 @@ function OrderDetails({
           </button>
           <div className="flex-1">
             <PrimaryAction order={order} busyAction={busyAction} onAction={onAction} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Shown on orders that stayed open far too long (driver never picked up / completed).
+ * The panel can't close them itself, so it opens a support ticket for the admins.
+ */
+function StuckNotice({ order }: { order: Order }) {
+  const { t } = useApp();
+  const queryClient = useQueryClient();
+  const tickets = useQuery({ queryKey: ["support"], queryFn: supportApi.list, staleTime: 60_000 });
+  const existing = tickets.data?.tickets.find((tk) => Number(tk.order_id) === order.id);
+
+  const report = useMutation({
+    mutationFn: () =>
+      supportApi.create({
+        subject: `${t("orders.reportSubject")} ${order.reference}`,
+        description: [
+          t("orders.reportBody"),
+          `${t("orders.reportRef")}: ${order.reference} (#${order.id})`,
+          `${t("orders.reportStatus")}: ${t(STATUS_LABEL_KEY[order.status])} (${order.status})`,
+          order.awaiting
+            ? `${t("orders.reportAwaiting")}: ${t(AWAITING_KEY[order.awaiting])}`
+            : null,
+          `${t("orders.reportPlaced")}: ${order.placed_at} (${formatElapsed(order.minutes_ago, t)})`,
+          order.driver?.name ? `${t("orders.driver")}: ${order.driver.name}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        order_id: order.id,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["support"] });
+      toast.success(t("orders.reported"));
+    },
+    onError: (e) => toast.error(errorMessage(e, t("states.errorDesc"))),
+  });
+
+  return (
+    <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+      <div className="flex items-start gap-2">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">{t("orders.stuckTitle")}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {t("orders.stuckDesc").replace("{time}", formatElapsed(order.minutes_ago, t))}
+          </p>
+          <div className="mt-2.5">
+            {existing || report.isSuccess ? (
+              <Link
+                to="/support"
+                className="inline-flex items-center gap-1.5 rounded-md bg-success/10 px-2.5 py-1.5 text-xs font-semibold text-success hover:bg-success/15"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" /> {t("orders.reportedView")}
+              </Link>
+            ) : (
+              <button
+                disabled={report.isPending || tickets.isPending}
+                onClick={() => report.mutate()}
+                className="inline-flex items-center gap-1.5 rounded-md bg-warning px-2.5 py-1.5 text-xs font-bold text-warning-foreground hover:opacity-90 disabled:opacity-60"
+              >
+                {report.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Flag className="h-3.5 w-3.5" />
+                )}
+                {t("orders.reportAdmin")}
+              </button>
+            )}
           </div>
         </div>
       </div>

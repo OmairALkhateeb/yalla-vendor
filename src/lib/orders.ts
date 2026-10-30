@@ -54,3 +54,18 @@ export function useAcceptCountdown(order: Pick<Order, "status" | "accept_seconds
 
   return left;
 }
+
+/**
+ * Orders still open this long after being placed are treated as stuck
+ * (driver never picked up / never completed). The backend should close them
+ * automatically; until it does, the panel flags them and lets staff report them.
+ */
+export const STUCK_AFTER_MINUTES = 120;
+
+export function isStuck(order: Pick<Order, "status" | "minutes_ago">): boolean {
+  return (
+    order.status !== "completed" &&
+    order.status !== "cancelled" &&
+    order.minutes_ago >= STUCK_AFTER_MINUTES
+  );
+}

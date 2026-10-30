@@ -32,7 +32,8 @@ import { SkeletonCards } from "@/components/ui-ez/States";
 import { QueryState, errorMessage } from "@/components/ui-ez/QueryState";
 import { reportsApi, type RangeQuery } from "@/lib/api/vendor";
 import type { Period } from "@/lib/api/types";
-import { formatChange, formatMoney, money, pickT, seriesLabel } from "@/lib/format";
+import { formatChange, formatMoney, pickT, seriesLabel } from "@/lib/format";
+import { useCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/reports")({
@@ -59,6 +60,7 @@ const PIE_COLORS = [
 
 function ReportsPage() {
   const { t, locale } = useApp();
+  const cur = useCurrency();
   const [range, setRange] = useState<Range>("week");
   const [custom, setCustom] = useState<{ from: string; to: string }>({ from: "", to: "" });
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -203,14 +205,14 @@ function ReportsPage() {
                 />
                 <StatCard
                   label={t("reports.revenue")}
-                  value={money(d.totals.revenue, d.currency, t)}
+                  value={cur.money(d.totals.revenue)}
                   delta={formatChange(d.changes.revenue_pct)}
                   icon={<DollarSign className="h-5 w-5" />}
                   tone="success"
                 />
                 <StatCard
                   label={t("reports.commissions")}
-                  value={money(d.totals.commissions, d.currency, t)}
+                  value={cur.money(d.totals.commissions)}
                   delta={`${Math.round(d.commission_rate * 100)}% ${t("reports.platformFee")}`}
                   deltaDirection="neutral"
                   icon={<Percent className="h-5 w-5" />}
@@ -241,10 +243,10 @@ function ReportsPage() {
                 />
                 <SimpleStat
                   label={t("reports.netRevenue")}
-                  value={money(d.totals.net, d.currency, t)}
+                  value={cur.money(d.totals.net)}
                   accent
                 />
-                <SimpleStat label={t("reports.aov")} value={money(d.totals.aov, d.currency, t)} />
+                <SimpleStat label={t("reports.aov")} value={cur.money(d.totals.aov)} />
               </div>
 
               {/* Revenue chart */}
@@ -292,7 +294,7 @@ function ReportsPage() {
                           borderRadius: 8,
                           fontSize: 12,
                         }}
-                        formatter={(v: number) => [money(v, d.currency, t), t("reports.revenue")]}
+                        formatter={(v: number) => [cur.money(v), t("reports.revenue")]}
                       />
                       <Area
                         type="monotone"
@@ -345,7 +347,7 @@ function ReportsPage() {
                             </div>
                           </div>
                           <span className="ez-num w-24 text-end text-sm font-semibold">
-                            {money(item.revenue, d.currency, t)}
+                            {cur.money(item.revenue)}
                           </span>
                         </li>
                       );
@@ -382,7 +384,7 @@ function ReportsPage() {
                             borderRadius: 8,
                             fontSize: 12,
                           }}
-                          formatter={(v: number) => money(v, d.currency, t)}
+                          formatter={(v: number) => cur.money(v)}
                         />
                       </PieChart>
                     </ResponsiveContainer>

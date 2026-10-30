@@ -18,6 +18,7 @@ import { QueryState } from "@/components/ui-ez/QueryState";
 import { performanceApi } from "@/lib/api/vendor";
 import type { Period } from "@/lib/api/types";
 import { formatChange, formatMoney, formatNumber, seriesLabel } from "@/lib/format";
+import { useCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/performance")({
@@ -34,6 +35,7 @@ const pct = (v: number | null) => (v === null ? "—" : `${formatNumber(v)}%`);
 
 function PerformancePage() {
   const { t } = useApp();
+  const cur = useCurrency();
   const [period, setPeriod] = useState<Period>("week");
   const query = useQuery({
     queryKey: ["performance", period],
@@ -169,7 +171,7 @@ function PerformancePage() {
                           fontSize: 12,
                         }}
                         formatter={(v: number) => [
-                          `${formatMoney(v)} ${t("common.currency")}`,
+                          `${formatMoney(v)} ${cur.label}`,
                           t("dash.revenue"),
                         ]}
                       />

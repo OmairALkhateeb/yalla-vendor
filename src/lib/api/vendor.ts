@@ -179,6 +179,7 @@ export const storeApi = {
         | "address"
         | "latitude"
         | "longitude"
+        | "delivery_radius_km"
         | "cuisine_category_id"
         | "prep_time_minutes"
       >

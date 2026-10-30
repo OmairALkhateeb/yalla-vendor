@@ -8,9 +8,10 @@ import { PageHeader, StatCard, StatusPill } from "@/components/ui-ez/Primitives"
 import { EmptyOrders, SkeletonCards } from "@/components/ui-ez/States";
 import { QueryState } from "@/components/ui-ez/QueryState";
 import { dashboardApi } from "@/lib/api/vendor";
-import { formatChange, formatMoney, formatNumber, money, pickT } from "@/lib/format";
+import { formatChange, formatMoney, formatNumber, pickT } from "@/lib/format";
 import { STATUS_LABEL_KEY } from "@/lib/orders";
 
+import { useCurrency } from "@/lib/currency";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/")({
 
 function Dashboard() {
   const { t, locale } = useApp();
+  const cur = useCurrency();
   const query = useQuery({
     queryKey: ["dashboard"],
     queryFn: dashboardApi.get,
@@ -60,7 +62,7 @@ function Dashboard() {
                 />
                 <StatCard
                   label={t("dash.revenue")}
-                  value={money(d.kpis.today_revenue.value, d.currency, t)}
+                  value={cur.money(d.kpis.today_revenue.value)}
                   delta={formatChange(d.kpis.today_revenue.change_pct)}
                   icon={<DollarSign className="h-5 w-5" />}
                   tone="success"
@@ -129,7 +131,7 @@ function Dashboard() {
                             borderRadius: 8,
                             fontSize: 12,
                           }}
-                          formatter={(v: number) => [money(v, d.currency, t), t("dash.revenue")]}
+                          formatter={(v: number) => [cur.money(v), t("dash.revenue")]}
                         />
                         <Bar
                           dataKey="value"
@@ -164,7 +166,7 @@ function Dashboard() {
                           </p>
                         </div>
                         <span className="ez-num text-sm font-semibold">
-                          {formatMoney(item.price)}
+                          {cur.money(item.price)}
                         </span>
                       </li>
                     ))}
@@ -219,7 +221,7 @@ function Dashboard() {
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold">{o.customer.name}</p>
                             <p className="ez-num truncate text-xs text-muted-foreground">
-                              {o.items_count} {t("dash.products")} · {money(o.total, d.currency, t)}
+                              {o.items_count} {t("dash.products")} · {cur.money(o.total)}
                             </p>
                           </div>
                           <StatusPill status={o.status} label={t(STATUS_LABEL_KEY[o.status])} />

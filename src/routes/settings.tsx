@@ -17,11 +17,14 @@ import {
   Loader2,
   Plus,
   Trash2,
+  MapPin,
+  LocateFixed,
 } from "lucide-react";
 import { useApp } from "@/i18n/AppProviders";
 import { LOCALES, type Locale } from "@/i18n/translations";
 import { PageHeader } from "@/components/ui-ez/Primitives";
 import { LoadingState } from "@/components/ui-ez/States";
+import { LocationPicker } from "@/components/ui-ez/LocationPicker";
 import { QueryState, errorMessage } from "@/components/ui-ez/QueryState";
 import { ApiError } from "@/lib/api/client";
 import { authApi, storeApi, teamApi } from "@/lib/api/vendor";
@@ -136,7 +139,13 @@ type StoreForm = {
   address: string;
   description: string;
   prep_time_minutes: string;
+  latitude: string;
+  longitude: string;
+  delivery_radius_km: string;
 };
+
+const numStr = (v: number | null | undefined) =>
+  v === null || v === undefined || Number.isNaN(Number(v)) ? "" : String(Number(v));
 
 const toStoreForm = (s: StoreT): StoreForm => ({
   name: s.name ?? "",
@@ -145,8 +154,51 @@ const toStoreForm = (s: StoreT): StoreForm => ({
   email: s.email ?? "",
   address: s.address ?? "",
   description: s.description ?? "",
-  prep_time_minutes: s.prep_time_minutes === null ? "" : String(s.prep_time_minutes),
+  prep_time_minutes: numStr(s.prep_time_minutes),
+  latitude: numStr(s.latitude),
+  longitude: numStr(s.longitude),
+  delivery_radius_km: numStr(s.delivery_radius_km),
 });
+
+type StorePayload = Parameters<typeof storeApi.update>[0];
+
+const toStorePayload = (f: StoreForm): StorePayload => ({
+  name: f.name.trim(),
+  cuisine_category_id: f.cuisine_category_id,
+  phone: f.phone.trim() || null,
+  email: f.email.trim() || null,
+  address: f.address.trim() || null,
+  description: f.description.trim() || null,
+  prep_time_minutes: f.prep_time_minutes === "" ? null : Number(f.prep_time_minutes),
+  latitude: f.latitude === "" ? null : Number(f.latitude),
+  longitude: f.longitude === "" ? null : Number(f.longitude),
+  delivery_radius_km: f.delivery_radius_km === "" ? null : Number(f.delivery_radius_km),
+});
+
+/** Only the fields the user actually changed — unrelated server-side rules can't block the save. */
+function changedFields(next: StorePayload, prev: StorePayload): StorePayload {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(next)) {
+    if (v !== (prev as Record<string, unknown>)[k]) out[k] = v;
+  }
+  return out as StorePayload;
+}
+
+/** Client-side checks for the location block (the API validates the rest). */
+function validateLocation(f: StoreForm, t: (k: string) => string): Record<string, string[]> {
+  const e: Record<string, string[]> = {};
+  const lat = f.latitude === "" ? null : Number(f.latitude);
+  const lng = f.longitude === "" ? null : Number(f.longitude);
+  const radius = f.delivery_radius_km === "" ? null : Number(f.delivery_radius_km);
+  if ((lat === null) !== (lng === null)) e.latitude = [t("settings.locationBoth")];
+  if (lat !== null && (Number.isNaN(lat) || lat < -90 || lat > 90))
+    e.latitude = [t("settings.invalidLatitude")];
+  if (lng !== null && (Number.isNaN(lng) || lng < -180 || lng > 180))
+    e.longitude = [t("settings.invalidLongitude")];
+  if (radius !== null && (Number.isNaN(radius) || radius <= 0 || radius > 100))
+    e.delivery_radius_km = [t("settings.invalidRadius")];
+  return e;
+}
 
 function StoreInfoSection() {
   const { t } = useApp();
@@ -168,27 +220,28 @@ function StoreInfoSection() {
     if (store.data) setForm(toStoreForm(store.data));
   }, [store.data]);
 
-  const afterStoreChange = (s: StoreT) => {
-    queryClient.setQueryData(["store"], s);
-    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-    void refreshMe(); // restaurant name / logo in the shell
+  const afterStoreChange = (s: StoreT | null | undefined) => {
+    // Only trust a full store object; otherwise re-read it from the server.
+    if (s && typeof s === "object" && "id" in s) queryClient.setQueryData(["store"], s);
+    else void queryClient.invalidateQueries({ queryKey: ["store"] });
+    void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    void refreshMe().catch(() => {}); // restaurant name / logo in the shell
   };
 
   const save = useMutation({
-    mutationFn: (f: StoreForm) =>
-      storeApi.update({
-        name: f.name,
-        cuisine_category_id: f.cuisine_category_id,
-        phone: f.phone || null,
-        email: f.email || null,
-        address: f.address || null,
-        description: f.description || null,
-        prep_time_minutes: f.prep_time_minutes === "" ? null : Number(f.prep_time_minutes),
-      }),
-    onSuccess: (s) => {
+    mutationFn: async (payload: StorePayload) => storeApi.update(payload),
+    onSuccess: (res, payload) => {
       setErrors({});
-      afterStoreChange(s);
+      afterStoreChange(res);
       onSaved();
+      // The radius isn't in VENDOR_API.md yet — tell the user if the server dropped it.
+      if (
+        "delivery_radius_km" in payload &&
+        res &&
+        typeof res === "object" &&
+        (res as StoreT).delivery_radius_km === undefined
+      )
+        toast.warning(t("settings.radiusNotSaved"));
     },
     onError: (e) => {
       if (e instanceof ApiError && e.errors) setErrors(e.errors);
@@ -216,6 +269,46 @@ function StoreInfoSection() {
   const set = <K extends keyof StoreForm>(k: K, v: StoreForm[K]) =>
     setForm((f) => (f ? { ...f, [k]: v } : f));
 
+  const [locating, setLocating] = useState(false);
+  const locateMe = () => {
+    if (!("geolocation" in navigator)) return toast.error(t("settings.locationDenied"));
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        setForm((f) =>
+          f
+            ? {
+                ...f,
+                latitude: String(Math.round(pos.coords.latitude * 1e6) / 1e6),
+                longitude: String(Math.round(pos.coords.longitude * 1e6) / 1e6),
+              }
+            : f,
+        );
+      },
+      () => {
+        setLocating(false);
+        toast.error(t("settings.locationDenied"));
+      },
+      { enableHighAccuracy: true, timeout: 10_000 },
+    );
+  };
+
+  const submit = (s: StoreT, f: StoreForm) => {
+    const local = validateLocation(f, t);
+    if (Object.keys(local).length) {
+      setErrors(local);
+      return;
+    }
+    const patch = changedFields(toStorePayload(f), toStorePayload(toStoreForm(s)));
+    if (Object.keys(patch).length === 0) {
+      setErrors({});
+      toast.info(t("settings.noChanges"));
+      return;
+    }
+    save.mutate(patch);
+  };
+
   return (
     <SectionCard title={t("settings.storeInfo")} description={t("settings.storeInfoHint")}>
       <QueryState query={store}>
@@ -224,7 +317,7 @@ function StoreInfoSection() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                save.mutate(form);
+                submit(s, form);
               }}
             >
               {/* Logo */}
@@ -361,10 +454,92 @@ function StoreInfoSection() {
                     />
                   </label>
                 </div>
+
+                {/* Location & delivery range */}
+                <div className="space-y-3 border-t border-border pt-4 sm:col-span-2">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="inline-flex items-center gap-1.5 text-sm font-semibold">
+                        <MapPin className="h-4 w-4 text-primary" /> {t("settings.location")}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {t("settings.locationHint")}
+                      </p>
+                    </div>
+                    {editable && (
+                      <button
+                        type="button"
+                        onClick={locateMe}
+                        disabled={locating}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-accent disabled:opacity-60"
+                      >
+                        {locating ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <LocateFixed className="h-3.5 w-3.5" />
+                        )}
+                        {t("settings.useMyLocation")}
+                      </button>
+                    )}
+                  </div>
+                  {form.latitude === "" && (
+                    <p className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-medium">
+                      {t("settings.locationMissing")}
+                    </p>
+                  )}
+                  <LocationPicker
+                    lat={form.latitude === "" ? null : Number(form.latitude)}
+                    lng={form.longitude === "" ? null : Number(form.longitude)}
+                    radiusKm={
+                      form.delivery_radius_km === "" ? null : Number(form.delivery_radius_km)
+                    }
+                    disabled={!editable}
+                    onChange={(la, ln) =>
+                      setForm((f) =>
+                        f ? { ...f, latitude: String(la), longitude: String(ln) } : f,
+                      )
+                    }
+                  />
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <Field
+                      label={t("settings.latitude")}
+                      type="number"
+                      ltr
+                      value={form.latitude}
+                      onChange={(v) => set("latitude", v)}
+                      error={errors.latitude?.[0]}
+                    />
+                    <Field
+                      label={t("settings.longitude")}
+                      type="number"
+                      ltr
+                      value={form.longitude}
+                      onChange={(v) => set("longitude", v)}
+                      error={errors.longitude?.[0]}
+                    />
+                    <Field
+                      label={t("settings.deliveryRadius")}
+                      type="number"
+                      ltr
+                      value={form.delivery_radius_km}
+                      onChange={(v) => set("delivery_radius_km", v)}
+                      error={errors.delivery_radius_km?.[0]}
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {t("settings.deliveryRadiusHint")}
+                  </p>
+                </div>
               </fieldset>
 
               {editable && (
-                <Footer pending={save.isPending} onCancel={() => setForm(toStoreForm(s))} />
+                <Footer
+                  pending={save.isPending}
+                  onCancel={() => {
+                    setErrors({});
+                    setForm(toStoreForm(s));
+                  }}
+                />
               )}
             </form>
           )
@@ -493,17 +668,20 @@ function AccountSection() {
   const [pw, setPw] = useState({ current_password: "", password: "", password_confirmation: "" });
   const [pwErrors, setPwErrors] = useState<Record<string, string[]>>({});
 
+  // /me may still be loading when this section mounts — fill the form once it arrives.
+  useEffect(() => {
+    if (vendor)
+      setProfile({ name: vendor.name ?? "", email: vendor.email ?? "", phone: vendor.phone ?? "" });
+  }, [vendor]);
+
   const saveProfile = useMutation({
-    mutationFn: () =>
-      authApi.updateProfile({
-        name: profile.name,
-        ...(profile.email ? { email: profile.email } : {}),
-        ...(profile.phone ? { phone: profile.phone } : {}),
-      }),
-    onSuccess: async () => {
+    // Send only what changed (PUT /profile) — re-sending an unchanged email/phone can trip
+    // the server's unique rules.
+    mutationFn: (body: Parameters<typeof authApi.updateProfile>[0]) => authApi.updateProfile(body),
+    onSuccess: () => {
       setProfileErrors({});
-      await refreshMe();
       onSaved();
+      void refreshMe().catch(() => {});
     },
     onError: (e) => {
       if (e instanceof ApiError && e.errors) setProfileErrors(e.errors);
@@ -530,7 +708,17 @@ function AccountSection() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            saveProfile.mutate();
+            const body: Parameters<typeof authApi.updateProfile>[0] = {};
+            if (profile.name.trim() !== (vendor?.name ?? "")) body.name = profile.name.trim();
+            if (profile.email.trim() && profile.email.trim() !== (vendor?.email ?? ""))
+              body.email = profile.email.trim();
+            if (profile.phone.trim() && profile.phone.trim() !== (vendor?.phone ?? ""))
+              body.phone = profile.phone.trim();
+            if (Object.keys(body).length === 0) {
+              toast.info(t("settings.noChanges"));
+              return;
+            }
+            saveProfile.mutate(body);
           }}
         >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -368,6 +368,8 @@ export interface Store {
   address: string | null;
   latitude: number | null;
   longitude: number | null;
+  /** Delivery range around the store. Not in VENDOR_API.md yet — may be missing from older backends. */
+  delivery_radius_km?: number | null;
   cuisine_category_id: number | null;
   cuisine_category: { id: number; name: string } | null;
   is_open: boolean;
